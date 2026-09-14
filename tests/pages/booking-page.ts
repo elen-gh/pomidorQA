@@ -46,7 +46,7 @@ export class BookingPage {
   }
 
   async gotoBookings() {
-    await this.page.goto("/pomidorqa/bookings");
+    await this.page.goto("/pomidorqa/bookings", { waitUntil: "commit" });
   }
 
   async searchBySkill(skill: string) {
@@ -68,7 +68,7 @@ export class BookingPage {
   }
 
   async addSlot(time: string) {
-    await this.page.goto("/pomidorqa/profile/slots");
+    await this.page.goto("/pomidorqa/profile/slots", { waitUntil: "commit" });
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const date = tomorrow.toISOString().slice(0, 10);
     await this.slotsDateInput.fill(date);

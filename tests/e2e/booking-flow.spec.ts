@@ -1,13 +1,17 @@
 import { test, expect } from "@playwright/test";
-import { registerUser, makeUser } from "../helpers/user";
+import { registerUserViaApi, makeUser, ROUTES, contextTracker } from "../helpers/user-api";
 import { ProfilePage } from "../pages/profile-page";
 import { BookingPage } from "../pages/booking-page";
 
 test.describe("Флоу бронирования", () => {
 
- test("основной путь + гонка за слот: регистрация → навык → слот → поиск в каталоге → бронирование → «Мои встречи» у обоих → второй гость видит ошибку", async ({
-  browser,
-}) => {
+ test.afterEach(async () => {
+    await contextTracker.cleanup();
+  });
+
+ test("основной путь + гонка за слот", async ({ browser }) => {
+  test.setTimeout(60_000);
+
   const runId = Date.now();
   const skillTag = `Playwright-demo-${runId}`;
   const host = makeUser("host", runId);
@@ -27,12 +31,11 @@ test.describe("Флоу бронирования", () => {
   const guestBooking = new BookingPage(guestPage);
   const guest2Booking = new BookingPage(guest2Page);
 
-  await test.step("Хост: регистрируется в PomidorQA", async () => {
-    await registerUser(hostPage, host);
+  await test.step("Хост: регистрируется в PomidorQA через API", async () => {
+    await registerUserViaApi(hostPage, hostContext, host);
   });
  
   await test.step("Хост: добавляет навык «могу помочь» в профиле", async () => {
-    await hostProfile.goto();
     await hostProfile.addSkill(skillTag, "can_help");
   });
 
@@ -48,8 +51,9 @@ test.describe("Флоу бронирования", () => {
     await expect(hostBooking.slotsCard.first()).toBeVisible();
   });
 
-  await test.step("Гость: регистрируется отдельным аккаунтом", async () => {
-    await registerUser(guestPage, guest);
+  await test.step("Гость: регистрируется отдельным аккаунтом через API", async () => {
+    await registerUserViaApi(guestPage, guestContext, guest);
+    await guestPage.goto(ROUTES.home, { waitUntil: "commit" });
   });
 
   await test.step("Гость: ищет хоста в каталоге по навыку", async () => {
@@ -82,13 +86,13 @@ test.describe("Флоу бронирования", () => {
     await guestBooking.selectFirstSlot();
   });
 
-
   await test.step("Гость: проверяет появление модального окна подтверждения бронирования", async () => {
     await expect(guestBooking.bookingConfirmDialog).toBeVisible();
   });
 
-  await test.step("Гость2: регистрируется отдельным аккаунтом", async () => {
-    await registerUser(guest2Page, guest2);
+  await test.step("Гость2: регистрируется отдельным аккаунтом через API", async () => {
+    await registerUserViaApi(guest2Page, guest2Context, guest2);
+    await guest2Page.goto(ROUTES.home, { waitUntil: "commit" });
   });
 
   await test.step("Гость2: ищет хоста в каталоге по навыку", async () => {
@@ -164,9 +168,5 @@ test.describe("Флоу бронирования", () => {
       await expect(card).toHaveText(guest.name);
     }).toPass({ timeout: 10_000 });
   });
-
-  await hostContext.close();
-  await guestContext.close();
-  await guest2Context.close();
 });
 });

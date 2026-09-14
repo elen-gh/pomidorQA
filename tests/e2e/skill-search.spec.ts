@@ -1,5 +1,5 @@
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
-import { registerUser, makeUser, type TestUser } from "../helpers/user";
+import { registerUserViaApi, makeUser, type TestUser, ROUTES, contextTracker } from "../helpers/user-api";
 import { ProfilePage } from "../pages/profile-page";
 import { BookingPage } from "../pages/booking-page";
 
@@ -37,7 +37,7 @@ test.describe("Поиск собеседника", () => {
     guestBooking = new BookingPage(guestPage);
 
     await test.step("Хост: регистрируется в PomidorQA", async () => {
-      await registerUser(hostPage, host);
+      await registerUserViaApi(hostPage, hostContext, host);
     });
    
     await test.step("Хост: добавляет навык «могу помочь» в профиле", async () => {
@@ -58,18 +58,16 @@ test.describe("Поиск собеседника", () => {
     });
 
     await test.step("Гость: регистрируется отдельным аккаунтом", async () => {
-      await registerUser(guestPage, guest);
+      await registerUserViaApi(guestPage, guestContext, guest);
+      await guestPage.goto(ROUTES.home, { waitUntil: "commit" });
     });
-
   });
 
   test.afterEach(async () => {
-    await hostContext.close();
-    await guestContext.close();
+    await contextTracker.cleanup();
   });
 
   test("Позитивный: поиск по полному наименованию навыка ", async () => {
-    
     await test.step("Гость: ищет хоста в каталоге по навыку", async () => {
       await guestBooking.searchBySkill(skillTag);
     });
@@ -80,7 +78,6 @@ test.describe("Поиск собеседника", () => {
   });
 
   test("Негативный: поиск по имени хоста неуспешен ", async () => {
-
     await test.step("Гость: ищет карточку в каталоге по имени Хоста", async () => {
       await guestBooking.searchBySkill(host.name);
     });

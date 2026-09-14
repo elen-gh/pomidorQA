@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { registerUser, makeUser, type TestUser } from "../helpers/user";
+import { registerUserViaApi, makeUser, type TestUser, contextTracker } from "../helpers/user-api";
 import { ProfilePage } from "../pages/profile-page";
 
 test.describe("свой мир на каждый тест", () => {
@@ -7,7 +7,7 @@ test.describe("свой мир на каждый тест", () => {
   let skillTag: string;
   let host: TestUser;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, context }) => {
     test.setTimeout(90_000);
     const runId = Date.now();
     
@@ -17,14 +17,18 @@ test.describe("свой мир на каждый тест", () => {
     profilePage = new ProfilePage(page);
     
     await test.step("Хост: регистрируется в PomidorQA", async () => {
-      await registerUser(page, host);
+      await registerUserViaApi(page, context, host);
     });
     
     await test.step("Хост: переходит на страницу профиля", async () => {
       await profilePage.goto();
     });
   });
-  
+
+  test.afterEach(async () => {
+    await contextTracker.cleanup();
+  });
+
   test("Смена имени в профиле", async ({ page }) => {
     await test.step("Хост: сохраняет новое имя в профиле", async () => {
         await profilePage.saveName(host.newName);
@@ -32,7 +36,7 @@ test.describe("свой мир на каждый тест", () => {
     });
 
     await test.step("Хост: перезагружает страницу", async () => {
-      await page.reload();
+      await page.reload({ waitUntil: "commit" });
     });
 
     await test.step("Хост: после reload проверяет имя с сервера", async () => {
@@ -47,7 +51,7 @@ test.describe("свой мир на каждый тест", () => {
         });
 
     await test.step("Хост: перезагружает страницу", async () => {
-      await page.reload();
+      await page.reload({ waitUntil: "commit" });
     });
 
     await test.step("Хост: после reload проверяет Telegram с сервера", async () => {
@@ -62,7 +66,7 @@ test.describe("свой мир на каждый тест", () => {
         });    
 
     await test.step("Хост: перезагружает страницу", async () => {
-      await page.reload();
+      await page.reload({ waitUntil: "commit" });
     });
 
     await test.step("Хост: после reload проверяет часовой пояс с сервера", async () => {
@@ -77,7 +81,7 @@ test.describe("свой мир на каждый тест", () => {
     });
 
     await test.step("Хост: перезагружает страницу", async () => {
-      await page.reload();
+      await page.reload({ waitUntil: "commit" });
     });
 
     await test.step("Хост: после reload проверяет текст «О себе» с сервера", async () => {
@@ -102,7 +106,7 @@ test.describe("свой мир на каждый тест", () => {
     });
 
     await test.step("Хост: перезагружает страницу профиля", async () => {
-      await page.reload();
+      await page.reload({ waitUntil: "commit" });
     });
 
     await test.step("Хост: проверяет, что поле Имя не сохранилось пустым", async () => {
@@ -122,7 +126,7 @@ test.describe("свой мир на каждый тест", () => {
     });
 
     await test.step("Хост: перезагружает страницу", async () => {
-      await page.reload();
+      await page.reload({ waitUntil: "commit" });
     });
 
     await test.step("Хост: после reload проверяет все сохранённые данные с сервера", async () => {
@@ -143,13 +147,11 @@ test.describe("свой мир на каждый тест", () => {
     });
 
     await test.step("Хост: перезагружает страницу", async () => {
-      await page.reload();
+      await page.reload({ waitUntil: "commit" });
     });
 
     await test.step("Хост: после reload проверяет, что навык удалился на сервере", async () => {
       await expect(profilePage.skillChips.filter({ hasText: skillTag })).toHaveCount(0);
     });
-});
-});
-  
-    
+  });
+  });

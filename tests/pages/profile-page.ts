@@ -1,5 +1,5 @@
 import { type Locator, type Page } from "@playwright/test";
-import { ROUTES } from "../helpers/user";
+import { ROUTES } from "../helpers/user-api";
 
 export class ProfilePage {
   page: Page;
@@ -29,7 +29,7 @@ export class ProfilePage {
   }
 
   async goto() {
-    await this.page.goto(ROUTES.profile);
+    await this.page.goto(ROUTES.profile, { waitUntil: "commit" });
   }
 
   async saveName(name: string) {

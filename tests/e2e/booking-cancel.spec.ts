@@ -1,9 +1,13 @@
 import { test, expect } from "@playwright/test";
-import { registerUser, makeUser, type TestUser } from "../helpers/user";
+import { registerUserViaApi, makeUser, ROUTES, contextTracker } from "../helpers/user-api";
 import { ProfilePage } from "../pages/profile-page";
 import { BookingPage } from "../pages/booking-page";
 
 test.describe("Флоу отмены бронирования", () => {
+
+  test.afterEach(async () => {
+    await contextTracker.cleanup();
+  });
 
  test("отмена бронирования: карточка переходит в прошедшие, отмену видят хост и гость", async ({ browser }) => {
   const runId = Date.now();
@@ -22,10 +26,10 @@ test.describe("Флоу отмены бронирования", () => {
   const guestBooking = new BookingPage(guestPage);
 
   await test.step("Хост: регистрируется в PomidorQA", async () => {
-    await registerUser(hostPage, host);
+    await registerUserViaApi(hostPage, hostContext, host);
   });
  
-  await test.step("Хост: добавляет навык «могу помочь» в профиле", async () => {
+  await test.step("Хост: добавляет навык «могу помочь» in профиле", async () => {
     await hostProfile.goto();
     await hostProfile.addSkill(skillTag, "can_help");
   });
@@ -43,7 +47,8 @@ test.describe("Флоу отмены бронирования", () => {
   });
 
   await test.step("Гость: регистрируется отдельным аккаунтом", async () => {
-    await registerUser(guestPage, guest);
+    await registerUserViaApi(guestPage, guestContext, guest);
+    await guestPage.goto(ROUTES.home, { waitUntil: "commit" });
   });
 
   await test.step("Гость: ищет хоста в каталоге по навыку", async () => {
@@ -66,7 +71,7 @@ test.describe("Флоу отмены бронирования", () => {
     await expect(async () => {
       const dayChip = guestBooking.bookingCalendarDay.first();
       if (!(await dayChip.isVisible().catch(() => false))) {
-        await guestPage.reload();
+        await guestPage.reload({ waitUntil: "commit" });
       }
       await expect(dayChip).toBeVisible();
     }).toPass({ timeout: 10_000 });
@@ -115,7 +120,7 @@ test.describe("Флоу отмены бронирования", () => {
   });
 
   await test.step("Гость: перезагрузка страницы", async () => {
-    await guestBooking.reload();
+    await guestPage.reload({ waitUntil: "commit" });
   });
 
   await test.step("Гость: после перезагрузки отмена отображается", async () => {
@@ -133,9 +138,5 @@ test.describe("Флоу отмены бронирования", () => {
     await expect(bookingCancelCard).toBeVisible();
     await expect(bookingCancelCard).toContainText("отменено");
   });
-
-  await hostContext.close();
-  await guestContext.close();
+ });
 });
-});
-
